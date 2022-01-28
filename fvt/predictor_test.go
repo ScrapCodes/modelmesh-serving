@@ -102,7 +102,7 @@ var _ = Describe("Predictor", func() {
 	// want to check the deployment state for each test since that would waste
 	// time. The sole purpose of the following test case is to ensure we are
 	// starting from the desired state.
-	Specify("Preparing the cluster for Predictor tests", func() {
+	FSpecify("Preparing the cluster for Predictor tests", func() {
 		// ensure configuration has scale-to-zero disabled
 		config := map[string]interface{}{
 			// disable scale-to-zero to prevent pods flapping as
@@ -134,7 +134,7 @@ var _ = Describe("Predictor", func() {
 		predictor := p
 		var _ = Describe("create "+predictor.predictorName+" predictor", func() {
 
-			It("should successfully load a model", func() {
+			FIt("should successfully load a model", func() {
 				predictorObject := NewPredictorForFVT(predictor.predictorFilename)
 				CreatePredictorAndWaitAndExpectLoaded(predictorObject)
 
@@ -153,13 +153,13 @@ var _ = Describe("Predictor", func() {
 				predictorWatcher := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + predictorName}, defaultTimeout)
 				defer predictorWatcher.Stop()
 				predictorObject = fvtClient.CreatePredictorExpectSuccess(predictorObject)
-				ExpectPredictorState(predictorObject, false, "Pending", "", "UpToDate")
+				ExpectState(predictorObject, false, "Pending", "", "UpToDate")
 
 				By("Creating the " + predictor.differentPredictorName + " predictor")
 				differentPredictorWatcher := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + differentPredictorName}, defaultTimeout)
 				defer differentPredictorWatcher.Stop()
 				differentPredictorObject = fvtClient.CreatePredictorExpectSuccess(differentPredictorObject)
-				ExpectPredictorState(differentPredictorObject, false, "Pending", "", "UpToDate")
+				ExpectState(differentPredictorObject, false, "Pending", "", "UpToDate")
 
 				By("Waiting for the first predictor to be 'Loaded'")
 				// "Standby" (or) "FailedToLoad" states are currently encountered after the "Loading" state but they shouldn't be
@@ -170,9 +170,9 @@ var _ = Describe("Predictor", func() {
 
 				By("Verifying the predictors")
 				predictorObject = fvtClient.GetPredictor(predictorName)
-				ExpectPredictorState(predictorObject, true, "Loaded", "", "UpToDate")
+				ExpectState(predictorObject, true, "Loaded", "", "UpToDate")
 				differentPredictorObject = fvtClient.GetPredictor(differentPredictorName)
-				ExpectPredictorState(differentPredictorObject, true, "Loaded", "", "UpToDate")
+				ExpectState(differentPredictorObject, true, "Loaded", "", "UpToDate")
 
 				// clean up
 				fvtClient.DeletePredictor(predictorName)
@@ -185,14 +185,14 @@ var _ = Describe("Predictor", func() {
 				watcher1 := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + pred1.GetName()}, defaultTimeout)
 				defer watcher1.Stop()
 				obj1 := fvtClient.CreatePredictorExpectSuccess(pred1)
-				ExpectPredictorState(obj1, false, "Pending", "", "UpToDate")
+				ExpectState(obj1, false, "Pending", "", "UpToDate")
 
 				By("Creating a second " + predictor.predictorName + " predictor")
 				pred2 := NewPredictorForFVT(predictor.predictorFilename)
 				watcher2 := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + pred2.GetName()}, defaultTimeout)
 				defer watcher2.Stop()
 				obj2 := fvtClient.CreatePredictorExpectSuccess(pred2)
-				ExpectPredictorState(obj2, false, "Pending", "", "UpToDate")
+				ExpectState(obj2, false, "Pending", "", "UpToDate")
 
 				By("Waiting for the first predictor to be 'Loaded'")
 				// "Standby" (or) "FailedToLoad" states are currently encountered after the "Loading" state but they shouldn't be
@@ -203,9 +203,9 @@ var _ = Describe("Predictor", func() {
 
 				By("Verifying the predictors")
 				obj1 = fvtClient.GetPredictor(pred1.GetName())
-				ExpectPredictorState(obj1, true, "Loaded", "", "UpToDate")
+				ExpectState(obj1, true, "Loaded", "", "UpToDate")
 				obj2 = fvtClient.GetPredictor(pred2.GetName())
-				ExpectPredictorState(obj2, true, "Loaded", "", "UpToDate")
+				ExpectState(obj2, true, "Loaded", "", "UpToDate")
 
 				// clean up
 				fvtClient.DeletePredictor(pred1.GetName())
@@ -921,7 +921,7 @@ var _ = Describe("Non-ModelMesh ServingRuntime", func() {
 		pred := NewPredictorForFVT("foo-predictor.yaml")
 
 		obj := fvtClient.CreatePredictorExpectSuccess(pred)
-		ExpectPredictorState(obj, false, "Pending", "", "UpToDate")
+		ExpectState(obj, false, "Pending", "", "UpToDate")
 
 		// Give time to process
 		time.Sleep(time.Second * 5)

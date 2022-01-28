@@ -98,7 +98,7 @@ var _ = Describe("Scaling of runtime deployments to zero", func() {
 
 			By("Waiting for the Predictor to cleanly transition to 'Loaded' state")
 			obj := WaitForLastStateInExpectedList("activeModelState", []string{"Pending", "Loading", "Loaded"}, watcher)
-			ExpectPredictorState(obj, true, "Loaded", "", "UpToDate")
+			ExpectState(obj, true, "Loaded", "", "UpToDate")
 		})
 
 	})

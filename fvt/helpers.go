@@ -34,6 +34,14 @@ func NewPredictorForFVT(filename string) *unstructured.Unstructured {
 	return p
 }
 
+func NewIsvcForFVT(filename string) *unstructured.Unstructured {
+	p := DecodeResourceFromFile(isvcSamplesPath + filename)
+	uniqueName := MakeUniquePredictorName(p.GetName())
+	p.SetName(uniqueName)
+
+	return p
+}
+
 // to enable tests to run in parallel even when loading from the same Predictor
 // sample
 func MakeUniquePredictorName(base string) string {
@@ -49,13 +57,32 @@ func CreatePredictorAndWaitAndExpectLoaded(predictorManifest *unstructured.Unstr
 	watcher := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + predictorName}, defaultTimeout)
 	defer watcher.Stop()
 	createdPredictor := fvtClient.CreatePredictorExpectSuccess(predictorManifest)
-	ExpectPredictorState(createdPredictor, false, "Pending", "", "UpToDate")
+	ExpectState(createdPredictor, false, "Pending", "", "UpToDate")
 
 	By("Waiting for predictor" + predictorName + " to be 'Loaded'")
 	// TODO: "Standby" (or) "FailedToLoad" states are currently encountered after the "Loading" state but they shouldn't be (see issue#994)
 	resultingPredictor := WaitForLastStateInExpectedList("activeModelState", []string{"Pending", "Loading", "Standby", "FailedToLoad", "Loading", "Loaded"}, watcher)
-	ExpectPredictorState(resultingPredictor, true, "Loaded", "", "UpToDate")
+	ExpectState(resultingPredictor, true, "Loaded", "", "UpToDate")
 	return resultingPredictor
+}
+
+func CreateIsvcAndWaitAndExpectLoaded(isvcManifest *unstructured.Unstructured) *unstructured.Unstructured {
+	isvcName := isvcManifest.GetName()
+	fmt.Printf("\nISVCNAME: %s\n", isvcName)
+	By("Creating inference service " + isvcName)
+	watcher := fvtClient.StartWatchingIsvcs(metav1.ListOptions{FieldSelector: "metadata.name=" + isvcName}, defaultTimeout)
+	fmt.Printf("\nWatched ISVCNAME: %s\n", isvcName)
+	defer watcher.Stop()
+	createdIsvc := fvtClient.CreateIsvcExpectSuccess(isvcManifest)
+	fmt.Printf("\ncreatedIsvc: %#v\n", createdIsvc)
+
+	ExpectState(createdIsvc, false, "Pending", "", "UpToDate")
+	fmt.Printf("\ncreatedIsvc is now in pending...: %#v\n", createdIsvc)
+	By("Waiting for inference service" + isvcName + " to be 'Loaded'")
+	// TODO: "Standby" (or) "FailedToLoad" states are currently encountered after the "Loading" state but they shouldn't be (see issue#994)
+	resultingIsvc := WaitForLastStateInExpectedList("activeModelState", []string{"Pending", "Loading", "Standby", "FailedToLoad", "Loading", "Loaded"}, watcher)
+	ExpectState(resultingIsvc, true, "Loaded", "", "UpToDate")
+	return resultingIsvc
 }
 
 func CreatePredictorAndWaitAndExpectFailed(predictorManifest *unstructured.Unstructured) *unstructured.Unstructured {
@@ -65,12 +92,12 @@ func CreatePredictorAndWaitAndExpectFailed(predictorManifest *unstructured.Unstr
 	watcher := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + predictorName}, defaultTimeout)
 	defer watcher.Stop()
 	createdPredictor := fvtClient.CreatePredictorExpectSuccess(predictorManifest)
-	ExpectPredictorState(createdPredictor, false, "Pending", "", "UpToDate")
+	ExpectState(createdPredictor, false, "Pending", "", "UpToDate")
 
 	By("Waiting for predictor" + predictorName + " to be 'FailedToLoaded'")
 	// "Standby" state is encountered after the "Loading" state but it shouldn't be
 	resultingPredictor := WaitForLastStateInExpectedList("activeModelState", []string{"Pending", "Loading", "Standby", "Loading", "FailedToLoad"}, watcher)
-	ExpectPredictorState(resultingPredictor, false, "FailedToLoad", "", "UpToDate")
+	ExpectState(resultingPredictor, false, "FailedToLoad", "", "UpToDate")
 	return resultingPredictor
 }
 
@@ -81,7 +108,7 @@ func CreatePredictorAndWaitAndExpectInvalidSpec(predictorManifest *unstructured.
 	watcher := fvtClient.StartWatchingPredictors(metav1.ListOptions{FieldSelector: "metadata.name=" + predictorName}, defaultTimeout)
 	defer watcher.Stop()
 	createdPredictor := fvtClient.CreatePredictorExpectSuccess(predictorManifest)
-	ExpectPredictorState(createdPredictor, false, "Pending", "", "UpToDate")
+	ExpectState(createdPredictor, false, "Pending", "", "UpToDate")
 
 	By("Waiting for predictor" + predictorName + " to have transitionStatus 'InvalidSpec'")
 	return WaitForLastStateInExpectedList("transitionStatus", []string{"UpToDate", "InvalidSpec"}, watcher)
@@ -97,11 +124,11 @@ func UpdatePredictorAndWaitAndExpectLoaded(predictorManifest *unstructured.Unstr
 
 	By("Waiting for the predictor " + predictorName + "'s target model state to move from Loaded (empty) to Loading")
 	loadingPredictor := WaitForLastStateInExpectedList("targetModelState", []string{"", "Loading"}, watcher)
-	ExpectPredictorState(loadingPredictor, true, "Loaded", "Loading", "InProgress")
+	ExpectState(loadingPredictor, true, "Loaded", "Loading", "InProgress")
 
 	By("Waiting for predictor " + predictorName + "'s target model state to be 'Loaded'")
 	resultingPredictor := WaitForLastStateInExpectedList("targetModelState", []string{"Loading", "Loaded", ""}, watcher)
-	ExpectPredictorState(resultingPredictor, true, "Loaded", "", "UpToDate")
+	ExpectState(resultingPredictor, true, "Loaded", "", "UpToDate")
 	return resultingPredictor
 }
 
@@ -115,16 +142,18 @@ func UpdatePredictorAndWaitAndExpectFailed(predictorManifest *unstructured.Unstr
 
 	By("Waiting for the predictor " + predictorName + "'s target model state to move from Loaded (empty) to Loading")
 	loadingPredictor := WaitForLastStateInExpectedList("targetModelState", []string{"", "Loading"}, watcher)
-	ExpectPredictorState(loadingPredictor, true, "Loaded", "Loading", "InProgress")
+	ExpectState(loadingPredictor, true, "Loaded", "Loading", "InProgress")
 
 	By("Waiting for predictor " + predictorName + "'s target model state to be 'FailedToLoad'")
 	resultingPredictor := WaitForLastStateInExpectedList("targetModelState", []string{"", "Loading", "FailedToLoad"}, watcher)
-	ExpectPredictorState(resultingPredictor, true, "Loaded", "FailedToLoad", "BlockedByFailedLoad")
+	ExpectState(resultingPredictor, true, "Loaded", "FailedToLoad", "BlockedByFailedLoad")
 	return resultingPredictor
 }
 
-func ExpectPredictorState(obj *unstructured.Unstructured, available bool, activeModelState, targetModelState, transitionStatus string) {
+func ExpectState(obj *unstructured.Unstructured, available bool, activeModelState, targetModelState, transitionStatus string) {
+	fmt.Printf("\nExpectState Obj: %#v\n", obj)
 	actualActiveModelState := GetString(obj, "status", "activeModelState")
+	fmt.Printf("\nActualActiveModelState %s \n", actualActiveModelState)
 	Expect(actualActiveModelState).To(Equal(activeModelState))
 
 	actualAvailable := GetBool(obj, "status", "available")
@@ -166,6 +195,46 @@ func ExpectPredictorFailureInfo(obj *unstructured.Unstructured, reason string, h
 		Expect(err).To(BeNil())
 		Expect(time.Since(actualTime) < time.Minute).To(BeTrue())
 	}
+}
+
+func WaitForIsvcReady(watcher watch.Interface) *unstructured.Unstructured {
+	ch := watcher.ResultChan()
+	isReady := false
+	var obj *unstructured.Unstructured
+	var isvcName string
+
+	timeout := time.After(predictorTimeout)
+	done := false
+	for !done {
+		select {
+		// Exit the loop if InferenceService is not ready before given timeout.
+		case <-timeout:
+			done = true
+		case event, ok := <-ch:
+			if !ok {
+				// the channel was closed (watcher timeout reached)
+				done = true
+				break
+			}
+			obj, ok = event.Object.(*unstructured.Unstructured)
+			Expect(ok).To(BeTrue())
+			isvcName = GetString(obj, "metadata", "name")
+			conditions := GetSlice(obj, "status", "conditions")
+			for _, condition := range conditions {
+				conditionMap := condition.(map[string]interface{})
+				if conditionMap["type"] == "Ready" {
+					if conditionMap["status"] == "True" {
+						isReady = true
+						done = true
+						break
+					}
+				}
+			}
+
+		}
+	}
+	Expect(isReady).To(BeTrue(), "Timeout before InferenceService '%s' ready", isvcName)
+	return obj
 }
 
 // Waiting for predictor state to reach the last one in the expected list
