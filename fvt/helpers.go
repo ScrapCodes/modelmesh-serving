@@ -210,6 +210,7 @@ func WaitForIsvcReady(watcher watch.Interface) *unstructured.Unstructured {
 				break
 			}
 			obj, ok = event.Object.(*unstructured.Unstructured)
+			fmt.Printf("Obj: %#v", obj)
 			Expect(ok).To(BeTrue())
 			isvcName = GetString(obj, "metadata", "name")
 			conditions := GetSlice(obj, "status", "conditions")
