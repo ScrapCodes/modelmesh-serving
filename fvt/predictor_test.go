@@ -102,7 +102,7 @@ var _ = Describe("Predictor", func() {
 	// want to check the deployment state for each test since that would waste
 	// time. The sole purpose of the following test case is to ensure we are
 	// starting from the desired state.
-	FSpecify("Preparing the cluster for Predictor tests", func() {
+	Specify("Preparing the cluster for Predictor tests", func() {
 		// ensure configuration has scale-to-zero disabled
 		config := map[string]interface{}{
 			// disable scale-to-zero to prevent pods flapping as
@@ -134,7 +134,7 @@ var _ = Describe("Predictor", func() {
 		predictor := p
 		var _ = Describe("create "+predictor.predictorName+" predictor", func() {
 
-			FIt("should successfully load a model", func() {
+			It("should successfully load a model", func() {
 				predictorObject := NewPredictorForFVT(predictor.predictorFilename)
 				CreatePredictorAndWaitAndExpectLoaded(predictorObject)
 
