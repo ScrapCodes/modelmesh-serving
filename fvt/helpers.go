@@ -213,7 +213,10 @@ func WaitForIsvcReady(watcher watch.Interface) *unstructured.Unstructured {
 			fmt.Printf("Obj: %#v", obj)
 			Expect(ok).To(BeTrue())
 			isvcName = GetString(obj, "metadata", "name")
-			conditions := GetSlice(obj, "status", "conditions")
+			conditions, exists := GetSlice(obj, "status", "conditions")
+			if !exists {
+				continue
+			}
 			for _, condition := range conditions {
 				conditionMap := condition.(map[string]interface{})
 				if conditionMap["type"] == "Ready" {
