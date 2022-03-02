@@ -66,22 +66,15 @@ func CreatePredictorAndWaitAndExpectLoaded(predictorManifest *unstructured.Unstr
 	return resultingPredictor
 }
 
-func CreateIsvcAndWaitAndExpectLoaded(isvcManifest *unstructured.Unstructured) *unstructured.Unstructured {
+func CreateIsvcAndWaitAndExpectReady(isvcManifest *unstructured.Unstructured) *unstructured.Unstructured {
 	isvcName := isvcManifest.GetName()
-	fmt.Printf("\nISVCNAME: %s\n", isvcName)
 	By("Creating inference service " + isvcName)
 	watcher := fvtClient.StartWatchingIsvcs(metav1.ListOptions{FieldSelector: "metadata.name=" + isvcName}, defaultTimeout)
-	fmt.Printf("\nWatched ISVCNAME: %s\n", isvcName)
 	defer watcher.Stop()
-	createdIsvc := fvtClient.CreateIsvcExpectSuccess(isvcManifest)
-	fmt.Printf("\ncreatedIsvc: %#v\n", createdIsvc)
-
-	ExpectState(createdIsvc, false, "Pending", "", "UpToDate")
-	fmt.Printf("\ncreatedIsvc is now in pending...: %#v\n", createdIsvc)
-	By("Waiting for inference service" + isvcName + " to be 'Loaded'")
-	// TODO: "Standby" (or) "FailedToLoad" states are currently encountered after the "Loading" state but they shouldn't be (see issue#994)
-	resultingIsvc := WaitForLastStateInExpectedList("activeModelState", []string{"Pending", "Loading", "Standby", "FailedToLoad", "Loading", "Loaded"}, watcher)
-	ExpectState(resultingIsvc, true, "Loaded", "", "UpToDate")
+	fvtClient.CreateIsvcExpectSuccess(isvcManifest)
+	By("Waiting for inference service" + isvcName + " to be 'Ready'")
+	// ISVC does not have the status field set initially.
+	resultingIsvc := WaitForIsvcReady(watcher)
 	return resultingIsvc
 }
 

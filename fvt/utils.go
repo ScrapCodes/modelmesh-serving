@@ -53,6 +53,13 @@ func GetString(obj *unstructured.Unstructured, fieldPath ...string) string {
 	return value
 }
 
+func GetSlice(obj *unstructured.Unstructured, fieldPath ...string) []interface{} {
+	value, exists, err := unstructured.NestedSlice(obj.Object, fieldPath...)
+	Expect(exists).To(BeTrue())
+	Expect(err).ToNot(HaveOccurred())
+	return value
+}
+
 func GetMap(obj *unstructured.Unstructured, fieldPath ...string) map[string]interface{} {
 	value, _, err := unstructured.NestedMap(obj.Object, fieldPath...)
 	Expect(err).ToNot(HaveOccurred())

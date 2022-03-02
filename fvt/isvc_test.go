@@ -51,7 +51,7 @@ var _ = Describe("Inference service", func() {
 	FIt("should successfully load a model", func() {
 		isvcObject := NewIsvcForFVT("new-format-mm.yaml")
 		fmt.Printf("Unstructured object \n%#v\n", isvcObject)
-		res := CreateIsvcAndWaitAndExpectLoaded(isvcObject)
+		res := CreateIsvcAndWaitAndExpectReady(isvcObject)
 		fmt.Printf("\nResult: %#v\n", res)
 		// clean up
 		fvtClient.DeleteIsvc(isvcObject.GetName())
