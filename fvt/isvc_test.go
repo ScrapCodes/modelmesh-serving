@@ -15,13 +15,12 @@
 package fvt
 
 import (
-	"fmt"
 	. "github.com/onsi/ginkgo"
 )
 
 var _ = Describe("Inference service", func() {
 	// starting from the desired state.
-	FSpecify("Preparing the cluster for inference service tests", func() {
+	Specify("Preparing the cluster for inference service tests", func() {
 		// ensure configuration has scale-to-zero disabled
 		config := map[string]interface{}{
 			// disable scale-to-zero to prevent pods flapping as
@@ -48,11 +47,9 @@ var _ = Describe("Inference service", func() {
 		// ensure a stable deploy state
 		WaitForStableActiveDeployState()
 	})
-	FIt("should successfully load a model", func() {
+	It("should successfully load a model", func() {
 		isvcObject := NewIsvcForFVT("new-format-mm.yaml")
-		fmt.Printf("Unstructured object \n%#v\n", isvcObject)
-		res := CreateIsvcAndWaitAndExpectReady(isvcObject)
-		fmt.Printf("\nResult: %#v\n", res)
+		CreateIsvcAndWaitAndExpectReady(isvcObject)
 		// clean up
 		fvtClient.DeleteIsvc(isvcObject.GetName())
 	})

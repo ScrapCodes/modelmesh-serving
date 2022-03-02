@@ -215,6 +215,7 @@ func WaitForIsvcReady(watcher watch.Interface) *unstructured.Unstructured {
 			isvcName = GetString(obj, "metadata", "name")
 			conditions, exists := GetSlice(obj, "status", "conditions")
 			if !exists {
+				time.Sleep(time.Second)
 				continue
 			}
 			for _, condition := range conditions {
