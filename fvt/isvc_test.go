@@ -39,7 +39,7 @@ var inferenceArray = []FVTInferenceService{
 
 var _ = Describe("Inference service", func() {
 	// starting from the desired state.
-	Specify("Preparing the cluster for inference service tests", func() {
+	FSpecify("Preparing the cluster for inference service tests", func() {
 		// ensure configuration has scale-to-zero disabled
 		config := map[string]interface{}{
 			// disable scale-to-zero to prevent pods flapping as
@@ -67,14 +67,14 @@ var _ = Describe("Inference service", func() {
 		WaitForStableActiveDeployState()
 	})
 	for _, i := range inferenceArray {
-		It("should successfully load a model", func() {
+		FIt("should successfully load a model", func() {
 			isvcObject := NewIsvcForFVT(i.inferenceServiceFileName)
 			CreateIsvcAndWaitAndExpectReady(isvcObject)
 			// clean up
 			fvtClient.DeleteIsvc(isvcObject.GetName())
 		})
 
-		var _ = Describe("MLServer inference", func() {
+		var _ = FDescribe("MLServer inference", func() {
 
 			var mlsIsvcObject *unstructured.Unstructured
 			var mlsISVCName string
@@ -94,7 +94,7 @@ var _ = Describe("Inference service", func() {
 				fvtClient.DeleteIsvc(mlsISVCName)
 			})
 
-			It("should successfully run inference", func() {
+			FIt("should successfully run inference", func() {
 				ExpectSuccessfulInference_sklearnMnistSvm(mlsISVCName)
 			})
 		})
