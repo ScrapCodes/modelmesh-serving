@@ -16,7 +16,26 @@ package fvt
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+type FVTInferenceService struct {
+	name                     string
+	inferenceServiceFileName string
+}
+
+var inferenceArray = []FVTInferenceService{
+	{
+		name:                     "New Format",
+		inferenceServiceFileName: "new-format-mm.yaml",
+	},
+	{
+		name:                     "Old Format",
+		inferenceServiceFileName: "old-format-mm.yaml",
+	},
+}
 
 var _ = Describe("Inference service", func() {
 	// starting from the desired state.
@@ -47,10 +66,37 @@ var _ = Describe("Inference service", func() {
 		// ensure a stable deploy state
 		WaitForStableActiveDeployState()
 	})
-	It("should successfully load a model", func() {
-		isvcObject := NewIsvcForFVT("new-format-mm.yaml")
-		CreateIsvcAndWaitAndExpectReady(isvcObject)
-		// clean up
-		fvtClient.DeleteIsvc(isvcObject.GetName())
-	})
+	for _, i := range inferenceArray {
+		It("should successfully load a model", func() {
+			isvcObject := NewIsvcForFVT(i.inferenceServiceFileName)
+			CreateIsvcAndWaitAndExpectReady(isvcObject)
+			// clean up
+			fvtClient.DeleteIsvc(isvcObject.GetName())
+		})
+
+		var _ = Describe("MLServer inference", func() {
+
+			var mlsIsvcObject *unstructured.Unstructured
+			var mlsISVCName string
+
+			BeforeEach(func() {
+				// load the test predictor object
+				mlsIsvcObject = NewIsvcForFVT(i.inferenceServiceFileName)
+				mlsISVCName = mlsIsvcObject.GetName()
+
+				CreateIsvcAndWaitAndExpectReady(mlsIsvcObject)
+
+				err := fvtClient.ConnectToModelServing(Insecure)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				fvtClient.DeleteIsvc(mlsISVCName)
+			})
+
+			It("should successfully run inference", func() {
+				ExpectSuccessfulInference_sklearnMnistSvm(mlsISVCName)
+			})
+		})
+	}
 })
